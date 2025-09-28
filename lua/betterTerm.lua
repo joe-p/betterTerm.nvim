@@ -644,7 +644,9 @@ function M.load_state(filename)
 		State.term_lookup[bufname] = index
 	end
 	for _, index in ipairs(persistent_state.sorted_indices or {}) do
-		State.sorted_keys[#State.sorted_keys + 1] = State.terms[index].bufname
+		if State.terms[index] then
+			State.sorted_keys[#State.sorted_keys + 1] = State.terms[index].bufname
+		end
 	end
 end
 
