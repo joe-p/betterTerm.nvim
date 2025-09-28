@@ -596,4 +596,56 @@ function M.setup(user_options)
 	)
 end
 
+-- Save state to file
+---@param filename string
+function M.save_state(filename)
+	filename = filename or "default"
+	local persistent_state = {
+		term_current = term_current,
+		terms = {},
+		sorted_indices = {},
+	}
+	for index, term in pairs(State.terms) do
+		persistent_state.terms[index] = term.name
+	end
+	for i, bufname in ipairs(State.sorted_keys) do
+		persistent_state.sorted_indices[i] = State.term_lookup[bufname]
+	end
+	local path = vim.fn.stdpath("data") .. "/betterTerm_" .. filename .. ".json"
+	vim.fn.writefile({ vim.json.encode(persistent_state) }, path)
+end
+
+-- Load state from file
+---@param filename string
+function M.load_state(filename)
+	filename = filename or "default"
+	local path = vim.fn.stdpath("data") .. "/betterTerm_" .. filename .. ".json"
+	if not vim.fn.filereadable(path) then
+		return
+	end
+	local content = vim.fn.readfile(path)
+	local persistent_state = vim.json.decode(table.concat(content, "\n"))
+	term_current = persistent_state.term_current or options.index_base
+	State.terms = {}
+	State.term_lookup = {}
+	State.sorted_keys = {}
+	for index, name in pairs(persistent_state.terms or {}) do
+		local bufname = name .. " (" .. index .. ")"
+		State.terms[index] = {
+			name = name,
+			bufname = bufname,
+			jobid = -1,
+			bufid = -1,
+			winid = -1,
+			tabpage = 0,
+			on_click_inactive = get_inactive_clickable_tab(bufname),
+			on_click_active = get_inactive_clickable_tab(bufname):gsub(options.inactive_tab_hl, options.active_tab_hl),
+		}
+		State.term_lookup[bufname] = index
+	end
+	for _, index in ipairs(persistent_state.sorted_indices or {}) do
+		State.sorted_keys[#State.sorted_keys + 1] = State.terms[index].bufname
+	end
+end
+
 return M
